@@ -67,6 +67,9 @@ Integrator::Integrator()
 	method = PATH;
 
 	sampling_pattern = SAMPLING_PATTERN_SOBOL;
+#if defined(__NO_SOBOL__) 
+	sampling_pattern = SAMPLING_PATTERN_CMJ;
+#endif
 
 	need_update = true;
 }
