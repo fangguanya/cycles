@@ -74,7 +74,7 @@ public:
 
 		progressive = false;
 		experimental = false;
-		samples = USHRT_MAX;
+		samples = INT_MAX;
 		tile_size = make_int2(64, 64);
 		start_resolution = INT_MAX;
 		threads = 0;
@@ -134,7 +134,7 @@ public:
 	function<void(RenderTile&)> update_render_tile_cb = nullptr;
 	function<void(int)> display_update_cb = nullptr;
 
-	Session(const SessionParams& params);
+	explicit Session(const SessionParams& params);
 	~Session();
 
 	void start();
