@@ -1005,9 +1005,14 @@ bool Session::update_progressive_refine(bool cancel)
 					update_render_tile_cb(rtile);
 			}
 		}
-		if (display_update_cb)
 		{
-			display_update_cb(sample);
+			if (pause_mutex.try_lock()) {
+				if (!pause && display_update_cb)
+				{
+					display_update_cb(sample);
+				}
+				pause_mutex.unlock();
+			}
 		}
 	}
 
