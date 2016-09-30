@@ -805,8 +805,6 @@ void Session::wait()
 
 void Session::update_scene()
 {
-	thread_scoped_lock scene_lock(scene->mutex);
-
 	/* update camera if dimensions changed for progressive render. the camera
 	 * knows nothing about progressive or cropped rendering, it just gets the
 	 * image dimensions passed in */
