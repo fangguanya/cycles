@@ -29,6 +29,8 @@ ccl_device_noinline float3 direct_emissive_eval(KernelGlobals *kg,
 	/* setup shading at emitter */
 	float3 eval;
 
+	int shader_flag = kernel_tex_fetch(__shader_flag, (ls->shader & SHADER_MASK)*SHADER_SIZE);
+
 #ifdef __BACKGROUND_MIS__
 	if(ls->type == LIGHT_BACKGROUND) {
 		Ray ray;
@@ -49,15 +51,28 @@ ccl_device_noinline float3 direct_emissive_eval(KernelGlobals *kg,
 	}
 	else
 #endif
+	if(shader_flag & SD_HAS_CONSTANT_EMISSION)
 	{
-		shader_setup_from_sample(kg, emission_sd, ls->P, ls->Ng, I, ls->shader, ls->object, ls->prim, ls->u, ls->v, t, time);
+		eval.x = __int_as_float(kernel_tex_fetch(__shader_flag, (ls->shader & SHADER_MASK)*SHADER_SIZE + 2));
+		eval.y = __int_as_float(kernel_tex_fetch(__shader_flag, (ls->shader & SHADER_MASK)*SHADER_SIZE + 3));
+		eval.z = __int_as_float(kernel_tex_fetch(__shader_flag, (ls->shader & SHADER_MASK)*SHADER_SIZE + 4));
+		if((ls->prim != PRIM_NONE) && dot(ls->Ng, I) < 0.0f) {
+			ls->Ng = -ls->Ng;
+		}
+	}
+	else
+	{
+		shader_setup_from_sample(kg, emission_sd,
+		                         ls->P, ls->Ng, I,
+		                         ls->shader, ls->object, ls->prim,
+		                         ls->u, ls->v, t, time, false);
 
 		ls->Ng = ccl_fetch(emission_sd, Ng);
 
 		/* no path flag, we're evaluating this for all closures. that's weak but
 		 * we'd have to do multiple evaluations otherwise */
 		path_state_modify_bounce(state, true);
-		shader_eval_surface(kg, emission_sd, state, 0.0f, 0, SHADER_CONTEXT_EMISSION);
+		shader_eval_surface(kg, emission_sd, NULL, state, 0.0f, 0, SHADER_CONTEXT_EMISSION);
 		path_state_modify_bounce(state, false);
 
 		/* evaluate emissive closure */
@@ -124,8 +139,10 @@ ccl_device_noinline bool direct_emission(KernelGlobals *kg,
 #ifdef __PASSES__
 	/* use visibility flag to skip lights */
 	if(ls->shader & SHADER_EXCLUDE_ANY) {
-		if(ls->shader & SHADER_EXCLUDE_DIFFUSE)
+		if(ls->shader & SHADER_EXCLUDE_DIFFUSE) {
 			eval->diffuse = make_float3(0.0f, 0.0f, 0.0f);
+			eval->subsurface = make_float3(0.0f, 0.0f, 0.0f);
+		}
 		if(ls->shader & SHADER_EXCLUDE_GLOSSY)
 			eval->glossy = make_float3(0.0f, 0.0f, 0.0f);
 		if(ls->shader & SHADER_EXCLUDE_TRANSMIT)

@@ -135,7 +135,7 @@ ccl_device_inline bool shadow_blocked(KernelGlobals *kg,
 				/* attenuation from transparent surface */
 				if(!(shadow_sd->flag & SD_HAS_ONLY_VOLUME)) {
 					path_state_modify_bounce(state, true);
-					shader_eval_surface(kg, shadow_sd, state, 0.0f, PATH_RAY_SHADOW, SHADER_CONTEXT_SHADOW);
+					shader_eval_surface(kg, shadow_sd, NULL, state, 0.0f, PATH_RAY_SHADOW, SHADER_CONTEXT_SHADOW);
 					path_state_modify_bounce(state, false);
 
 					throughput *= shader_bsdf_transparency(kg, shadow_sd);
@@ -143,14 +143,14 @@ ccl_device_inline bool shadow_blocked(KernelGlobals *kg,
 
 				/* stop if all light is blocked */
 				if(is_zero(throughput)) {
-					/* free dynamic storage */
 					return true;
 				}
 
 				/* move ray forward */
 				ray->P = shadow_sd->P;
-				if(ray->t != FLT_MAX)
+				if(ray->t != FLT_MAX) {
 					ray->D = normalize_len(Pend - ray->P, &ray->t);
+				}
 
 #ifdef __VOLUME__
 				/* exit/enter volume */
@@ -173,7 +173,7 @@ ccl_device_inline bool shadow_blocked(KernelGlobals *kg,
 	}
 	else {
 		Intersection isect;
-		blocked = scene_intersect(kg, ray, PATH_RAY_SHADOW_OPAQUE, &isect, NULL, 0.0f, 0.0f);
+		blocked = scene_intersect(kg, *ray, PATH_RAY_SHADOW_OPAQUE, &isect, NULL, 0.0f, 0.0f);
 	}
 
 #ifdef __VOLUME__
@@ -240,7 +240,7 @@ ccl_device_noinline bool shadow_blocked(KernelGlobals *kg,
 #endif
 	{
 		blocked = scene_intersect(kg,
-		                          ray,
+		                          *ray,
 		                          PATH_RAY_SHADOW_OPAQUE,
 		                          isect,
 		                          NULL,
@@ -266,7 +266,7 @@ ccl_device_noinline bool shadow_blocked(KernelGlobals *kg,
 				if(bounce >= kernel_data.integrator.transparent_max_bounce)
 					return true;
 
-				if(!scene_intersect(kg, ray, PATH_RAY_SHADOW_TRANSPARENT, isect, NULL, 0.0f, 0.0f))
+				if(!scene_intersect(kg, *ray, PATH_RAY_SHADOW_TRANSPARENT, isect, NULL, 0.0f, 0.0f))
 				{
 #ifdef __VOLUME__
 					/* attenuation for last line segment towards light */
@@ -316,19 +316,22 @@ ccl_device_noinline bool shadow_blocked(KernelGlobals *kg,
 				/* attenuation from transparent surface */
 				if(!(ccl_fetch(shadow_sd, flag) & SD_HAS_ONLY_VOLUME)) {
 					path_state_modify_bounce(state, true);
-					shader_eval_surface(kg, shadow_sd, state, 0.0f, PATH_RAY_SHADOW, SHADER_CONTEXT_SHADOW);
+					shader_eval_surface(kg, shadow_sd, NULL, state, 0.0f, PATH_RAY_SHADOW, SHADER_CONTEXT_SHADOW);
 					path_state_modify_bounce(state, false);
 
 					throughput *= shader_bsdf_transparency(kg, shadow_sd);
 				}
 
-				if(is_zero(throughput))
+				/* stop if all light is blocked */
+				if(is_zero(throughput)) {
 					return true;
+				}
 
 				/* move ray forward */
 				ray->P = ray_offset(ccl_fetch(shadow_sd, P), -ccl_fetch(shadow_sd, Ng));
-				if(ray->t != FLT_MAX)
+				if(ray->t != FLT_MAX) {
 					ray->D = normalize_len(Pend - ray->P, &ray->t);
+				}
 
 #ifdef __VOLUME__
 				/* exit/enter volume */

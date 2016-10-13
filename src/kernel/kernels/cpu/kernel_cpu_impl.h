@@ -113,6 +113,7 @@ void KERNEL_FUNCTION_FULL_NAME(shader)(KernelGlobals *kg,
 {
 	if(type >= SHADER_EVAL_BAKE) {
 		kernel_assert(output_luma == NULL);
+#ifdef __BAKING__
 		kernel_bake_evaluate(kg,
 		                     input,
 		                     output,
@@ -121,6 +122,7 @@ void KERNEL_FUNCTION_FULL_NAME(shader)(KernelGlobals *kg,
 		                     i,
 		                     offset,
 		                     sample);
+#endif
 	}
 	else {
 		kernel_shader_evaluate(kg,

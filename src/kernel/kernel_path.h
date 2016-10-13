@@ -25,6 +25,7 @@
 #include "kernel_camera.h"
 
 #include "geom/geom.h"
+#include "bvh/bvh.h"
 
 #include "kernel_accumulate.h"
 #include "kernel_shader.h"
@@ -68,7 +69,7 @@ ccl_device void kernel_path_indirect(KernelGlobals *kg,
 		Intersection isect;
 		uint visibility = path_state_ray_visibility(kg, state);
 		bool hit = scene_intersect(kg,
-		                           ray,
+		                           *ray,
 		                           visibility,
 		                           &isect,
 		                           nullptr,
@@ -253,7 +254,7 @@ ccl_device void kernel_path_indirect(KernelGlobals *kg,
 		                      &isect,
 		                      ray);
 		float rbsdf = path_state_rng_1D_for_decision(kg, rng, state, PRNG_BSDF);
-		shader_eval_surface(kg, sd, state, rbsdf, state->flag, SHADER_CONTEXT_INDIRECT);
+		shader_eval_surface(kg, sd, rng, state, rbsdf, state->flag, SHADER_CONTEXT_INDIRECT);
 #ifdef __BRANCHED_PATH__
 		shader_merge_closures(sd);
 #endif
@@ -434,8 +435,12 @@ ccl_device_noinline void kernel_path_ao(KernelGlobals *kg,
 }
 
 #ifdef __SUBSURFACE__
-
-ccl_device bool kernel_path_subsurface_scatter(
+#  ifndef __KERNEL_CUDA__
+ccl_device
+#  else
+ccl_device_inline
+#  endif
+bool kernel_path_subsurface_scatter(
         KernelGlobals *kg,
         ShaderData *sd,
         ShaderData *emission_sd,
@@ -664,9 +669,9 @@ ccl_device_inline float4 kernel_path_integrate(KernelGlobals *kg,
 			lcg_state = lcg_state_init(rng, &state, 0x51633e2d);
 		}
 
-		bool hit = scene_intersect(kg, &ray, visibility, &isect, &lcg_state, difl, extmax);
+		bool hit = scene_intersect(kg, ray, visibility, &isect, &lcg_state, difl, extmax);
 #else
-		bool hit = scene_intersect(kg, &ray, visibility, &isect, nullptr, 0.0f, 0.0f);
+		bool hit = scene_intersect(kg, ray, visibility, &isect, nullptr, 0.0f, 0.0f);
 #endif
 
 #ifdef __KERNEL_DEBUG__
@@ -805,7 +810,7 @@ ccl_device_inline float4 kernel_path_integrate(KernelGlobals *kg,
 		/* setup shading */
 		shader_setup_from_ray(kg, &sd, &isect, &ray);
 		float rbsdf = path_state_rng_1D_for_decision(kg, rng, &state, PRNG_BSDF);
-		shader_eval_surface(kg, &sd, &state, rbsdf, state.flag, SHADER_CONTEXT_MAIN);
+		shader_eval_surface(kg, &sd, rng, &state, rbsdf, state.flag, SHADER_CONTEXT_MAIN);
 
 		/* holdout */
 #ifdef __HOLDOUT__
