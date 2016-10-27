@@ -72,7 +72,7 @@ ccl_device void kernel_path_indirect(KernelGlobals *kg,
 		                           *ray,
 		                           visibility,
 		                           &isect,
-		                           nullptr,
+		                           NULL,
 		                           0.0f, 0.0f);
 
 #ifdef __LAMP_MIS__
@@ -171,7 +171,7 @@ ccl_device void kernel_path_indirect(KernelGlobals *kg,
 					                                         rphase,
 					                                         rscatter,
 					                                         &volume_segment,
-					                                         nullptr,
+					                                         NULL,
 					                                         true);
 				}
 
@@ -671,7 +671,7 @@ ccl_device_inline float4 kernel_path_integrate(KernelGlobals *kg,
 
 		bool hit = scene_intersect(kg, ray, visibility, &isect, &lcg_state, difl, extmax);
 #else
-		bool hit = scene_intersect(kg, ray, visibility, &isect, nullptr, 0.0f, 0.0f);
+		bool hit = scene_intersect(kg, ray, visibility, &isect, NULL, 0.0f, 0.0f);
 #endif
 
 #ifdef __KERNEL_DEBUG__
@@ -748,7 +748,7 @@ ccl_device_inline float4 kernel_path_integrate(KernelGlobals *kg,
 
 					result = kernel_volume_decoupled_scatter(kg,
 						&state, &volume_ray, &sd, &throughput,
-						rphase, rscatter, &volume_segment, nullptr, true);
+						rphase, rscatter, &volume_segment, NULL, true);
 				}
 
 				/* free cached steps */
