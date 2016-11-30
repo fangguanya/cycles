@@ -154,6 +154,7 @@ ImageManager::ImageDataType ImageManager::get_image_metadata(const string& filen
 			return (channels > 1) ? IMAGE_DATA_TYPE_BYTE4 : IMAGE_DATA_TYPE_BYTE;
 		}
 	}
+#ifndef NO_OIIO_LOADING
 
 	ImageInput *in = ImageInput::create(filename);
 
@@ -213,6 +214,10 @@ ImageManager::ImageDataType ImageManager::get_image_metadata(const string& filen
 	else {
 		return (channels > 1) ? IMAGE_DATA_TYPE_BYTE4 : IMAGE_DATA_TYPE_BYTE;
 	}
+
+#else
+	return (channels > 1) ? IMAGE_DATA_TYPE_BYTE4 : IMAGE_DATA_TYPE_BYTE;
+#endif
 }
 
 /* We use a consecutive slot counting scheme on the devices, in order
@@ -419,10 +424,17 @@ void ImageManager::tag_reload_image(const string& filename,
 	}
 }
 
+
 bool ImageManager::file_load_image_generic(Image *img, ImageInput **in, int &width, int &height, int &depth, int &components)
 {
 	if(img->filename == "")
 		return false;
+#ifndef NO_OIIO_LOADING
+
+	int width, height, depth, components;
+	bool cmyk = false;
+
+	ImageInput *in = NULL;
 
 	if(!img->builtin_data) {
 		/* load image from file through OIIO */
@@ -467,6 +479,14 @@ bool ImageManager::file_load_image_generic(Image *img, ImageInput **in, int &wid
 
 		return false;
 	}
+#else
+		/* load image using builtin images callbacks */
+		if(!builtin_image_info_cb || !builtin_image_pixels_cb)
+			return false;
+
+		bool is_float;
+		builtin_image_info_cb(img->filename, img->builtin_data, is_float, width, height, depth, components);
+#endif
 
 	return true;
 }
@@ -477,25 +497,25 @@ bool ImageManager::file_load_byte_image(Image *img, ImageDataType type, device_v
 	ImageInput *in = NULL;
 	int width, height, depth, components;
 
-	if(!file_load_image_generic(img, &in, width, height, depth, components))
+	if (!file_load_image_generic(img, &in, width, height, depth, components))
 		return false;
 
 	/* read RGBA pixels */
 	uchar *pixels = (uchar*)tex_img.resize(width, height, depth);
-	if(pixels == NULL) {
+	if (pixels == NULL) {
 		return false;
 	}
 	bool cmyk = false;
-
-	if(in) {
-		if(depth <= 1) {
-			int scanlinesize = width*components*sizeof(uchar);
+#ifndef NO_OIIO_LOADING
+	if (in) {
+		if (depth <= 1) {
+			int scanlinesize = width*components * sizeof(uchar);
 
 			in->read_image(TypeDesc::UINT8,
-			               (uchar*)pixels + (((size_t)height)-1)*scanlinesize,
-			               AutoStride,
-			               -scanlinesize,
-			               AutoStride);
+				(uchar*)pixels + (((size_t)height) - 1)*scanlinesize,
+				AutoStride,
+				-scanlinesize,
+				AutoStride);
 		}
 		else {
 			in->read_image(TypeDesc::UINT8, (uchar*)pixels);
@@ -506,54 +526,56 @@ bool ImageManager::file_load_byte_image(Image *img, ImageDataType type, device_v
 		in->close();
 		delete in;
 	}
-	else {
+	else
+#endif
+	{
 		builtin_image_pixels_cb(img->filename, img->builtin_data, pixels);
 	}
 
 	/* Check if we actually have a byte4 slot, in case components == 1, but device
-	 * doesn't support single channel textures. */
-	if(type == IMAGE_DATA_TYPE_BYTE4) {
+	* doesn't support single channel textures. */
+	if (type == IMAGE_DATA_TYPE_BYTE4) {
 		size_t num_pixels = ((size_t)width) * height * depth;
-		if(cmyk) {
+		if (cmyk) {
 			/* CMYK */
-			for(size_t i = num_pixels-1, pixel = 0; pixel < num_pixels; pixel++, i--) {
-				pixels[i*4+2] = (pixels[i*4+2]*pixels[i*4+3])/255;
-				pixels[i*4+1] = (pixels[i*4+1]*pixels[i*4+3])/255;
-				pixels[i*4+0] = (pixels[i*4+0]*pixels[i*4+3])/255;
-				pixels[i*4+3] = 255;
+			for (size_t i = num_pixels - 1, pixel = 0; pixel < num_pixels; pixel++, i--) {
+				pixels[i * 4 + 2] = (pixels[i * 4 + 2] * pixels[i * 4 + 3]) / 255;
+				pixels[i * 4 + 1] = (pixels[i * 4 + 1] * pixels[i * 4 + 3]) / 255;
+				pixels[i * 4 + 0] = (pixels[i * 4 + 0] * pixels[i * 4 + 3]) / 255;
+				pixels[i * 4 + 3] = 255;
 			}
 		}
-		else if(components == 2) {
+		else if (components == 2) {
 			/* grayscale + alpha */
-			for(size_t i = num_pixels-1, pixel = 0; pixel < num_pixels; pixel++, i--) {
-				pixels[i*4+3] = pixels[i*2+1];
-				pixels[i*4+2] = pixels[i*2+0];
-				pixels[i*4+1] = pixels[i*2+0];
-				pixels[i*4+0] = pixels[i*2+0];
+			for (size_t i = num_pixels - 1, pixel = 0; pixel < num_pixels; pixel++, i--) {
+				pixels[i * 4 + 3] = pixels[i * 2 + 1];
+				pixels[i * 4 + 2] = pixels[i * 2 + 0];
+				pixels[i * 4 + 1] = pixels[i * 2 + 0];
+				pixels[i * 4 + 0] = pixels[i * 2 + 0];
 			}
 		}
-		else if(components == 3) {
+		else if (components == 3) {
 			/* RGB */
-			for(size_t i = num_pixels-1, pixel = 0; pixel < num_pixels; pixel++, i--) {
-				pixels[i*4+3] = 255;
-				pixels[i*4+2] = pixels[i*3+2];
-				pixels[i*4+1] = pixels[i*3+1];
-				pixels[i*4+0] = pixels[i*3+0];
+			for (size_t i = num_pixels - 1, pixel = 0; pixel < num_pixels; pixel++, i--) {
+				pixels[i * 4 + 3] = 255;
+				pixels[i * 4 + 2] = pixels[i * 3 + 2];
+				pixels[i * 4 + 1] = pixels[i * 3 + 1];
+				pixels[i * 4 + 0] = pixels[i * 3 + 0];
 			}
 		}
-		else if(components == 1) {
+		else if (components == 1) {
 			/* grayscale */
-			for(size_t i = num_pixels-1, pixel = 0; pixel < num_pixels; pixel++, i--) {
-				pixels[i*4+3] = 255;
-				pixels[i*4+2] = pixels[i];
-				pixels[i*4+1] = pixels[i];
-				pixels[i*4+0] = pixels[i];
+			for (size_t i = num_pixels - 1, pixel = 0; pixel < num_pixels; pixel++, i--) {
+				pixels[i * 4 + 3] = 255;
+				pixels[i * 4 + 2] = pixels[i];
+				pixels[i * 4 + 1] = pixels[i];
+				pixels[i * 4 + 0] = pixels[i];
 			}
 		}
 
-		if(img->use_alpha == false) {
-			for(size_t i = num_pixels-1, pixel = 0; pixel < num_pixels; pixel++, i--) {
-				pixels[i*4+3] = 255;
+		if (img->use_alpha == false) {
+			for (size_t i = num_pixels - 1, pixel = 0; pixel < num_pixels; pixel++, i--) {
+				pixels[i * 4 + 3] = 255;
 			}
 		}
 	}
@@ -567,21 +589,21 @@ bool ImageManager::file_load_float_image(Image *img, ImageDataType type, device_
 	ImageInput *in = NULL;
 	int width, height, depth, components;
 
-	if(!file_load_image_generic(img, &in, width, height, depth, components))
+	if (!file_load_image_generic(img, &in, width, height, depth, components))
 		return false;
 
 	/* read RGBA pixels */
 	float *pixels = (float*)tex_img.resize(width, height, depth);
-	if(pixels == NULL) {
+	if (pixels == NULL) {
 		return false;
 	}
 	bool cmyk = false;
-
-	if(in) {
+#ifndef NO_OIIO_LOADING
+	if (in) {
 		float *readpixels = pixels;
 		vector<float> tmppixels;
 
-		if(components > 4) {
+		if (components > 4) {
 			tmppixels.resize(((size_t)width)*height*components);
 			readpixels = &tmppixels[0];
 		}
@@ -589,22 +611,22 @@ bool ImageManager::file_load_float_image(Image *img, ImageDataType type, device_
 		if(depth <= 1) {
 			size_t scanlinesize = ((size_t)width)*components*sizeof(float);
 			in->read_image(TypeDesc::FLOAT,
-			               (uchar*)readpixels + (height-1)*scanlinesize,
-			               AutoStride,
-			               -scanlinesize,
-			               AutoStride);
+				(uchar*)readpixels + (height - 1)*scanlinesize,
+				AutoStride,
+				-scanlinesize,
+				AutoStride);
 		}
 		else {
 			in->read_image(TypeDesc::FLOAT, (uchar*)readpixels);
 		}
 
-		if(components > 4) {
+		if (components > 4) {
 			size_t dimensions = ((size_t)width)*height;
-			for(size_t i = dimensions-1, pixel = 0; pixel < dimensions; pixel++, i--) {
-				pixels[i*4+3] = tmppixels[i*components+3];
-				pixels[i*4+2] = tmppixels[i*components+2];
-				pixels[i*4+1] = tmppixels[i*components+1];
-				pixels[i*4+0] = tmppixels[i*components+0];
+			for (size_t i = dimensions - 1, pixel = 0; pixel < dimensions; pixel++, i--) {
+				pixels[i * 4 + 3] = tmppixels[i*components + 3];
+				pixels[i * 4 + 2] = tmppixels[i*components + 2];
+				pixels[i * 4 + 1] = tmppixels[i*components + 1];
+				pixels[i * 4 + 0] = tmppixels[i*components + 0];
 			}
 
 			tmppixels.clear();
@@ -615,59 +637,62 @@ bool ImageManager::file_load_float_image(Image *img, ImageDataType type, device_
 		in->close();
 		delete in;
 	}
-	else {
+	else
+#endif
+	{
 		builtin_image_float_pixels_cb(img->filename, img->builtin_data, pixels);
 	}
 
 	/* Check if we actually have a float4 slot, in case components == 1, but device
-	 * doesn't support single channel textures. */
-	if(type == IMAGE_DATA_TYPE_FLOAT4) {
+	* doesn't support single channel textures. */
+	if (type == IMAGE_DATA_TYPE_FLOAT4) {
 		size_t num_pixels = ((size_t)width) * height * depth;
-		if(cmyk) {
+		if (cmyk) {
 			/* CMYK */
-			for(size_t i = num_pixels-1, pixel = 0; pixel < num_pixels; pixel++, i--) {
-				pixels[i*4+3] = 255;
-				pixels[i*4+2] = (pixels[i*4+2]*pixels[i*4+3])/255;
-				pixels[i*4+1] = (pixels[i*4+1]*pixels[i*4+3])/255;
-				pixels[i*4+0] = (pixels[i*4+0]*pixels[i*4+3])/255;
+			for (size_t i = num_pixels - 1, pixel = 0; pixel < num_pixels; pixel++, i--) {
+				pixels[i * 4 + 3] = 255;
+				pixels[i * 4 + 2] = (pixels[i * 4 + 2] * pixels[i * 4 + 3]) / 255;
+				pixels[i * 4 + 1] = (pixels[i * 4 + 1] * pixels[i * 4 + 3]) / 255;
+				pixels[i * 4 + 0] = (pixels[i * 4 + 0] * pixels[i * 4 + 3]) / 255;
 			}
 		}
-		else if(components == 2) {
+		else if (components == 2) {
 			/* grayscale + alpha */
-			for(size_t i = num_pixels-1, pixel = 0; pixel < num_pixels; pixel++, i--) {
-				pixels[i*4+3] = pixels[i*2+1];
-				pixels[i*4+2] = pixels[i*2+0];
-				pixels[i*4+1] = pixels[i*2+0];
-				pixels[i*4+0] = pixels[i*2+0];
+			for (size_t i = num_pixels - 1, pixel = 0; pixel < num_pixels; pixel++, i--) {
+				pixels[i * 4 + 3] = pixels[i * 2 + 1];
+				pixels[i * 4 + 2] = pixels[i * 2 + 0];
+				pixels[i * 4 + 1] = pixels[i * 2 + 0];
+				pixels[i * 4 + 0] = pixels[i * 2 + 0];
 			}
 		}
-		else if(components == 3) {
+		else if (components == 3) {
 			/* RGB */
-			for(size_t i = num_pixels-1, pixel = 0; pixel < num_pixels; pixel++, i--) {
-				pixels[i*4+3] = 1.0f;
-				pixels[i*4+2] = pixels[i*3+2];
-				pixels[i*4+1] = pixels[i*3+1];
-				pixels[i*4+0] = pixels[i*3+0];
+			for (size_t i = num_pixels - 1, pixel = 0; pixel < num_pixels; pixel++, i--) {
+				pixels[i * 4 + 3] = 1.0f;
+				pixels[i * 4 + 2] = pixels[i * 3 + 2];
+				pixels[i * 4 + 1] = pixels[i * 3 + 1];
+				pixels[i * 4 + 0] = pixels[i * 3 + 0];
 			}
 		}
-		else if(components == 1) {
+		else if (components == 1) {
 			/* grayscale */
-			for(size_t i = num_pixels-1, pixel = 0; pixel < num_pixels; pixel++, i--) {
-				pixels[i*4+3] = 1.0f;
-				pixels[i*4+2] = pixels[i];
-				pixels[i*4+1] = pixels[i];
-				pixels[i*4+0] = pixels[i];
+			for (size_t i = num_pixels - 1, pixel = 0; pixel < num_pixels; pixel++, i--) {
+				pixels[i * 4 + 3] = 1.0f;
+				pixels[i * 4 + 2] = pixels[i];
+				pixels[i * 4 + 1] = pixels[i];
+				pixels[i * 4 + 0] = pixels[i];
 			}
 		}
 
-		if(img->use_alpha == false) {
-			for(size_t i = num_pixels-1, pixel = 0; pixel < num_pixels; pixel++, i--) {
-				pixels[i*4+3] = 1.0f;
+		if (img->use_alpha == false) {
+			for (size_t i = num_pixels - 1, pixel = 0; pixel < num_pixels; pixel++, i--) {
+				pixels[i * 4 + 3] = 1.0f;
 			}
 		}
 	}
 
 	return true;
+
 }
 
 template<typename T>
@@ -685,6 +710,7 @@ bool ImageManager::file_load_half_image(Image *img, ImageDataType type, device_v
 		return false;
 	}
 
+#ifndef NO_OIIO_LOADING
 	if(in) {
 		half *readpixels = pixels;
 		vector<half> tmppixels;
@@ -721,6 +747,7 @@ bool ImageManager::file_load_half_image(Image *img, ImageDataType type, device_v
 		in->close();
 		delete in;
 	}
+#endif
 #if 0
 	/* TODO(dingto): Support half for ImBuf. */
 	else {

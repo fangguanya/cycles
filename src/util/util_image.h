@@ -19,6 +19,8 @@
 
 /* OpenImageIO is used for all image file reading and writing. */
 
+#ifndef NO_OIIO_LOADING
+
 #include <OpenImageIO/imageio.h>
 
 CCL_NAMESPACE_BEGIN
@@ -26,6 +28,8 @@ CCL_NAMESPACE_BEGIN
 OIIO_NAMESPACE_USING
 
 CCL_NAMESPACE_END
+
+#endif
 
 #endif /* __UTIL_IMAGE_H__ */
 
