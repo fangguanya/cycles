@@ -758,9 +758,12 @@ class CyclesObject_PT_cycles_settings(CyclesButtonsPanel, Panel):
 
         col = layout.column()
         col.label(text="Performance:")
-        row = col.row()
+        flow = layout.column_flow()
+        row = flow.row()
         row.active = scene.render.use_simplify and cscene.use_camera_cull
         row.prop(cob, "use_camera_cull")
+
+        flow.prop(cob, "is_shadow_catcher")
 
 
 class CYCLES_OT_use_shading_nodes(Operator):
