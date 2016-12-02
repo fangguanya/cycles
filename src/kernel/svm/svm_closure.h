@@ -137,6 +137,10 @@ ccl_device void svm_node_closure_bsdf(KernelGlobals *kg, ShaderData *sd, float *
 			float3 subsurface_color = stack_valid(data_subsurface_color.x) ? stack_load_float3(stack, data_subsurface_color.x) :
 				make_float3(__uint_as_float(data_subsurface_color.y), __uint_as_float(data_subsurface_color.z), __uint_as_float(data_subsurface_color.w));
 
+			uint4 data_specular_color = read_node(kg, offset);
+			float3 specular_color = stack_valid(data_specular_color.x) ? stack_load_float3(stack, data_specular_color.x) :
+				make_float3(__uint_as_float(data_specular_color.y), __uint_as_float(data_specular_color.z), __uint_as_float(data_specular_color.w));
+
 			float3 weight = ccl_fetch(sd, svm_closure_weight) * mix_weight;
 
 #ifdef __SUBSURFACE__
@@ -238,7 +242,7 @@ ccl_device void svm_node_closure_bsdf(KernelGlobals *kg, ShaderData *sd, float *
 
 			/* sheen */
 			if(diffuse_weight > CLOSURE_WEIGHT_CUTOFF && sheen > CLOSURE_WEIGHT_CUTOFF) {
-				float m_cdlum = linear_rgb_to_gray(base_color);
+				float m_cdlum = linear_rgb_to_luminance(base_color);
 				float3 m_ctint = m_cdlum > 0.0f ? base_color / m_cdlum : make_float3(1.0f, 1.0f, 1.0f); // normalize lum. to isolate hue+sat
 
 				/* color of the sheen component */
@@ -267,8 +271,8 @@ ccl_device void svm_node_closure_bsdf(KernelGlobals *kg, ShaderData *sd, float *
 					if(roughness <= 1e-2f) {
 						float spec_to_ior = (2.0f / (1.0f - safe_sqrtf(0.08f * specular))) - 1.0f;
 
-						float m_cdlum = linear_rgb_to_gray(base_color);
-						float3 m_ctint = m_cdlum > 0.0f ? base_color / m_cdlum : make_float3(0.0f, 0.0f, 0.0f); // normalize lum. to isolate hue+sat
+						float m_cdlum = linear_rgb_to_luminance(specular_color);
+						float3 m_ctint = m_cdlum > 0.0f ? specular_color / m_cdlum : make_float3(0.0f, 0.0f, 0.0f); // normalize lum. to isolate hue+sat
 						float3 tmp_col = make_float3(1.0f, 1.0f, 1.0f) * (1.0f - specular_tint) + m_ctint * specular_tint;
 						float3 cspec0 = (specular * 0.08f * tmp_col) * (1.0f - metallic) + base_color * metallic;
 
@@ -304,8 +308,8 @@ ccl_device void svm_node_closure_bsdf(KernelGlobals *kg, ShaderData *sd, float *
 							bsdf->alpha_x = fmaxf(0.001f, r2 / aspect);
 							bsdf->alpha_y = fmaxf(0.001f, r2 * aspect);
 
-							float m_cdlum = 0.3f * base_color.x + 0.6f * base_color.y + 0.1f * base_color.z; // luminance approx.
-							float3 m_ctint = m_cdlum > 0.0f ? base_color / m_cdlum : make_float3(0.0f, 0.0f, 0.0f); // normalize lum. to isolate hue+sat
+							float m_cdlum = linear_rgb_to_luminance(specular_color); // luminance approx.
+							float3 m_ctint = m_cdlum > 0.0f ? specular_color / m_cdlum : make_float3(0.0f, 0.0f, 0.0f); // normalize lum. to isolate hue+sat
 							float3 tmp_col = make_float3(1.0f, 1.0f, 1.0f) * (1.0f - specular_tint) + m_ctint * specular_tint;
 
 							bsdf->extra->cspec0 = (specular * 0.08f * tmp_col) * (1.0f - metallic) + base_color * metallic;
@@ -329,7 +333,7 @@ ccl_device void svm_node_closure_bsdf(KernelGlobals *kg, ShaderData *sd, float *
 #endif
 				if(transp > CLOSURE_WEIGHT_CUTOFF) {
 					float3 glass_weight = weight * transp;
-					float3 cspec0 = base_color * specular_tint + make_float3(1.0f, 1.0f, 1.0f) * (1.0f - specular_tint);
+					float3 cspec0 = specular_color * specular_tint + make_float3(1.0f, 1.0f, 1.0f) * (1.0f - specular_tint);
 
 					if(roughness <= 5e-2f || distribution == CLOSURE_BSDF_MICROFACET_GGX_GLASS_ID) { /* use single-scatter GGX */
 						float refl_roughness = roughness;
@@ -443,7 +447,7 @@ ccl_device void svm_node_closure_bsdf(KernelGlobals *kg, ShaderData *sd, float *
 						bsdf->alpha_x = 0.1f * (1.0f - clearcoat_gloss) + 0.001f * clearcoat_gloss;
 						bsdf->alpha_y = 0.1f * (1.0f - clearcoat_gloss) + 0.001f * clearcoat_gloss;
 
-						bsdf->extra->cspec0 = make_float3(0.04f, 0.04f, 0.04f);
+						bsdf->extra->cspec0 = specular_color * 0.04f;
 						bsdf->extra->clearcoat = clearcoat;
 
 						/* setup bsdf */
