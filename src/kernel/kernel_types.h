@@ -145,6 +145,7 @@ CCL_NAMESPACE_BEGIN
 
 #ifndef __SPLIT_KERNEL__
 #  define __SHADOW_TRICKS__
+#  define __SHADOW_CATCHER_BACKGROUND__
 #endif
 
 #ifdef __KERNEL_SHADING__
