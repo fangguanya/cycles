@@ -2278,6 +2278,7 @@ NODE_DEFINE(DisneyBsdfNode)
 	distribution_enum.insert("Multiscatter GGX", CLOSURE_BSDF_MICROFACET_MULTI_GGX_GLASS_ID);
 	SOCKET_ENUM(distribution, "Distribution", distribution_enum, CLOSURE_BSDF_MICROFACET_MULTI_GGX_GLASS_ID);
 	SOCKET_IN_COLOR(base_color, "Base Color", make_float3(0.8f, 0.8f, 0.8f));
+	SOCKET_IN_COLOR(spec_color, "Specular Color", make_float3(0.8f, 0.8f, 0.8f));
 	SOCKET_IN_COLOR(subsurface_color, "Subsurface Color", make_float3(0.8f, 0.8f, 0.8f));
 	SOCKET_IN_FLOAT(metallic, "Metallic", 0.0f);
 	SOCKET_IN_FLOAT(subsurface, "Subsurface", 0.0f);
@@ -2325,7 +2326,7 @@ void DisneyBsdfNode::attributes(Shader *shader, AttributeRequestSet *attributes)
 	ShaderNode::attributes(shader, attributes);
 }
 
-void DisneyBsdfNode::compile(SVMCompiler& compiler, ShaderInput *p_metallic, ShaderInput *p_subsurface, ShaderInput *p_subsurface_radius,
+void DisneyBsdfNode::compile(SVMCompiler& compiler, ShaderInput *p_specular_color, ShaderInput *p_metallic, ShaderInput *p_subsurface, ShaderInput *p_subsurface_radius,
 	ShaderInput *p_specular, ShaderInput *p_roughness, ShaderInput *p_specular_tint, ShaderInput *p_anisotropic,
 	ShaderInput *p_sheen, ShaderInput *p_sheen_tint, ShaderInput *p_clearcoat, ShaderInput *p_clearcoat_gloss,
 	ShaderInput *p_ior, ShaderInput *p_transparency, ShaderInput *p_anisotropic_rotation, ShaderInput *p_refraction_roughness)
@@ -2383,6 +2384,11 @@ void DisneyBsdfNode::compile(SVMCompiler& compiler, ShaderInput *p_metallic, Sha
 
 	compiler.add_node(((subsurface_color_in->link) ? compiler.stack_assign(subsurface_color_in) : SVM_STACK_INVALID),
 		__float_as_int(ss_default.x), __float_as_int(ss_default.y), __float_as_int(ss_default.z));
+
+	float3 sc_default = get_float3(p_specular_color->socket_type);
+
+	compiler.add_node(((p_specular_color->link) ? compiler.stack_assign(p_specular_color) : SVM_STACK_INVALID),
+		__float_as_int(sc_default.x), __float_as_int(sc_default.y), __float_as_int(sc_default.z));
 }
 
 bool DisneyBsdfNode::has_integrator_dependency()
@@ -2393,7 +2399,7 @@ bool DisneyBsdfNode::has_integrator_dependency()
 
 void DisneyBsdfNode::compile(SVMCompiler& compiler)
 {
-	compile(compiler, input("Metallic"), input("Subsurface"), input("Subsurface Radius"), input("Specular"),
+	compile(compiler, input("Specular Color"), input("Metallic"), input("Subsurface"), input("Subsurface Radius"), input("Specular"),
 		input("Roughness"), input("Specular Tint"), input("Anisotropic"), input("Sheen"), input("Sheen Tint"),
 		input("Clearcoat"), input("Clearcoat Gloss"), input("IOR"), input("Transparency"),
 		input("Anisotropic Rotation"), input("Refraction Roughness"));
