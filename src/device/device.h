@@ -207,7 +207,7 @@ class Device {
 protected:
 	Device(DeviceInfo& info_, Stats &stats_, bool background) : background(background), vertex_buffer(0), info(info_), stats(stats_) {}
 
-	bool background;
+	bool background = false;
 	string error_msg;
 
 	/* used for real time display */

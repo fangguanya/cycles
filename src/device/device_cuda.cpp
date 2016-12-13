@@ -203,6 +203,8 @@ public:
 		}
 		else {
 			result = cuGLCtxCreate(&cuContext, 0, cuDevice);
+		
+			cuda_error_(result, "cuGLCtxCreate");
 
 			if(result != CUDA_SUCCESS) {
 				result = cuCtxCreate(&cuContext, 0, cuDevice);

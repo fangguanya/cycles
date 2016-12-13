@@ -197,7 +197,7 @@ public:
 		              string program_name,
 		              string kernel_name,
 		              string kernel_build_options,
-		              bool use_stdout = true);
+		              bool use_stdout = false);
 		~OpenCLProgram();
 
 		void add_kernel(ustring name);

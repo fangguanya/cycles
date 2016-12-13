@@ -178,12 +178,12 @@ bool Session::draw_gpu(BufferParams& buffer_params, DeviceDrawParams& draw_param
 		if(!buffer_params.modified(display->params)) {
 			/* for CUDA we need to do tonemapping still, since we can
 			 * only access GL buffers from the main thread */
-			if(gpu_need_tonemap) {
+			/*if(gpu_need_tonemap) {
 				thread_scoped_lock buffers_lock(buffers_mutex);
 				tonemap(tile_manager.state.sample);
 				gpu_need_tonemap = false;
 				gpu_need_tonemap_cond.notify_all();
-			}
+			}*/
 
 			display->draw(device, draw_params);
 
@@ -719,7 +719,7 @@ void Session::run()
 
 bool Session::draw(BufferParams& buffer_params, DeviceDrawParams &draw_params)
 {
-	if (display_update_cb) return false;
+	//if (display_update_cb) return false;
 
 	if(device_use_gl)
 		return draw_gpu(buffer_params, draw_params);
