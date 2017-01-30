@@ -19,10 +19,12 @@
 
 #include <stdlib.h>
 
+
 #include "device_memory.h"
 #include "device_task.h"
 
 #include "util_list.h"
+#include "util_opengl.h"
 #include "util_stats.h"
 #include "util_string.h"
 #include "util_thread.h"
@@ -209,6 +211,7 @@ std::ostream& operator <<(std::ostream &os,
 struct DeviceDrawParams {
 	function<void(void)> bind_display_space_shader_cb;
 	function<void(void)> unbind_display_space_shader_cb;
+	GLuint program;
 };
 
 class Device {
