@@ -110,8 +110,6 @@ void Device::draw_pixels(device_memory& rgba, int y, int w, int h, int dx, int d
 
 	if(rgba.data_type == TYPE_HALF) {
 		GLhalf *data_pointer = (GLhalf*)rgba.data_pointer;
-		float vbuffer[16], *basep;
-		float *vp = NULL;
 
 		data_pointer += 4*y*w;
 
@@ -134,7 +132,7 @@ void Device::draw_pixels(device_memory& rgba, int y, int w, int h, int dx, int d
 		GLuint temp_vao = 0;
 		glGenVertexArrays(1, &temp_vao);
 		glBindVertexArray(temp_vao);
-		GLuint temp_vbo;
+		GLuint temp_vbo = 0;
 		glGenBuffers(1, &temp_vbo);
 
 		static const float vertices[] = { -1,-1, 1,-1, 1,1, -1,1 };
