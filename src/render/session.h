@@ -139,6 +139,9 @@ public:
 	void start();
 	bool draw(BufferParams& params, DeviceDrawParams& draw_params);
 	void wait();
+	void prepare_run();
+	void end_run();
+	bool sample();
 
 	bool ready_to_reset();
 	void reset(BufferParams& params, int samples);
@@ -176,6 +179,7 @@ protected:
 	void reset_cpu(BufferParams& params, int samples);
 
 	void run_gpu();
+	bool sample_gpu();
 	bool draw_gpu(BufferParams& params, DeviceDrawParams& draw_params);
 	void reset_gpu(BufferParams& params, int samples);
 

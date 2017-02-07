@@ -194,6 +194,67 @@ bool Session::draw_gpu(BufferParams& buffer_params, DeviceDrawParams& draw_param
 	return false;
 }
 
+bool Session::sample_gpu()
+{
+		bool no_tiles = !tile_manager.next();
+		bool end = false;
+
+		if(!no_tiles) {
+			/* update scene */
+			scoped_timer update_timer;	// TODO: probably move this into separate function
+																	// so we can call this from controlling code
+																	// when we deem it necessary ourselves.
+			update_scene();
+			progress.add_skip_time(update_timer, params.background);
+
+			if(!device->error_message().empty())
+				progress.set_error(device->error_message());
+
+			if (progress.get_cancel())
+				end = true;
+		}
+
+		if (!end && !no_tiles) {
+			/* buffers mutex is locked entirely while rendering each
+			 * sample, and released/reacquired on each iteration to allow
+			 * reset and draw in between */
+			//thread_scoped_lock buffers_lock(buffers_mutex);
+			thread_scoped_lock display_lock(display_mutex);
+
+			/* update status and timing */
+			update_status_time();
+
+			/* path trace */
+			path_trace();
+
+			device->task_wait();
+
+			if (!device->error_message().empty())
+				progress.set_cancel(device->error_message());
+
+			/* update status and timing */
+			update_status_time();
+
+			gpu_draw_ready = true;
+			progress.set_update();
+
+
+			if (!device->error_message().empty())
+				progress.set_error(device->error_message());
+
+			//display->draw_set(tile_manager.state.buffer.width, tile_manager.state.buffer.height);
+			tonemap(tile_manager.state.sample);
+
+			update_progressive_refine(true); //progress.get_cancel() /*|| display_update_cb != nullptr*/);
+
+
+			if (progress.get_cancel())
+				end = true;
+		}
+
+	return !no_tiles;
+}
+
 void Session::run_gpu()
 {
 	bool tiles_written = false;
@@ -709,6 +770,32 @@ void Session::run()
 		progress.set_update();
 }
 
+void Session::prepare_run()
+{
+	/* load kernels */
+	load_kernels();
+
+	/* session thread loop */
+	progress.set_status("Waiting for render to start");
+
+	/* reset number of rendered samples */
+	progress.reset_sample();
+	progress.set_render_start_time();
+}
+
+bool Session::sample() {
+	return sample_gpu();
+}
+
+void Session::end_run() {
+	/* progress update */
+	if(progress.get_cancel())
+		progress.set_status("Cancel", progress.get_cancel_message());
+	else
+		progress.set_update();
+
+}
+
 bool Session::draw(BufferParams& buffer_params, DeviceDrawParams &draw_params)
 {
 	if(device_use_gl)
@@ -959,15 +1046,6 @@ bool Session::update_progressive_refine(bool cancel)
 			else {
 				if(update_render_tile_cb)
 					update_render_tile_cb(rtile);
-			}
-		}
-		{
-			if (pause_mutex.try_lock()) {
-				if (!pause && display_update_cb)
-				{
-					display_update_cb(sample);
-				}
-				pause_mutex.unlock();
 			}
 		}
 	}
