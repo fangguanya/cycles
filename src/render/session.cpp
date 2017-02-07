@@ -166,6 +166,7 @@ void Session::reset_gpu(BufferParams& buffer_params, int samples)
 bool Session::draw_gpu(BufferParams& buffer_params, DeviceDrawParams& draw_params)
 {
 	/* block for buffer access */
+	//thread_scoped_lock buffers_lock(buffers_mutex);
 	thread_scoped_lock display_lock(display_mutex);
 
 	/* first check we already rendered something */
@@ -175,12 +176,12 @@ bool Session::draw_gpu(BufferParams& buffer_params, DeviceDrawParams& draw_param
 		if(!buffer_params.modified(display->params)) {
 			/* for CUDA we need to do tonemapping still, since we can
 			 * only access GL buffers from the main thread */
-			if(display_update_cb==nullptr && gpu_need_tonemap) {
-				thread_scoped_lock buffers_lock(buffers_mutex);
+			/*if(display_update_cb==nullptr && gpu_need_tonemap) {
+				//thread_scoped_lock buffers_lock(buffers_mutex);
 				tonemap(tile_manager.state.sample);
 				gpu_need_tonemap = false;
 				gpu_need_tonemap_cond.notify_all();
-			}
+			}*/
 
 			display->draw(device, draw_params);
 
