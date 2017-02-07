@@ -166,7 +166,6 @@ void Session::reset_gpu(BufferParams& buffer_params, int samples)
 bool Session::draw_gpu(BufferParams& buffer_params, DeviceDrawParams& draw_params)
 {
 	/* block for buffer access */
-	//thread_scoped_lock buffers_lock(buffers_mutex);
 	thread_scoped_lock display_lock(display_mutex);
 
 	/* first check we already rendered something */
