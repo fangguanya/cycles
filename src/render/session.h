@@ -175,6 +175,7 @@ protected:
 	void reset_(BufferParams& params, int samples);
 
 	void run_cpu();
+	bool sample_cpu();
 	bool draw_cpu(BufferParams& params, DeviceDrawParams& draw_params);
 	void reset_cpu(BufferParams& params, int samples);
 
