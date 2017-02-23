@@ -243,7 +243,7 @@ bool Session::sample_gpu()
 				progress.set_error(device->error_message());
 
 			//display->draw_set(tile_manager.state.buffer.width, tile_manager.state.buffer.height);
-			tonemap(tile_manager.state.sample);
+			if(!params.background) tonemap(tile_manager.state.sample);
 
 			update_progressive_refine(true); //progress.get_cancel() /*|| display_update_cb != nullptr*/);
 
@@ -606,7 +606,7 @@ bool Session::sample_cpu()
 				progress.set_error(device->error_message());
 
 			//display->draw_set(tile_manager.state.buffer.width, tile_manager.state.buffer.height);
-			tonemap(tile_manager.state.sample);
+			if(!params.background) tonemap(tile_manager.state.sample);
 
 			update_progressive_refine(true); //progress.get_cancel() /*|| display_update_cb != nullptr*/);
 
