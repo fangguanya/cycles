@@ -215,12 +215,6 @@ bool Session::sample_gpu()
 		}
 
 		if (!end && !no_tiles) {
-			/* buffers mutex is locked entirely while rendering each
-			 * sample, and released/reacquired on each iteration to allow
-			 * reset and draw in between */
-			//thread_scoped_lock buffers_lock(buffers_mutex);
-			thread_scoped_lock display_lock(display_mutex);
-
 			/* update status and timing */
 			update_status_time();
 
@@ -242,11 +236,12 @@ bool Session::sample_gpu()
 			if (!device->error_message().empty())
 				progress.set_error(device->error_message());
 
-			//display->draw_set(tile_manager.state.buffer.width, tile_manager.state.buffer.height);
-			if(!params.background) tonemap(tile_manager.state.sample);
+			if (!params.background) {
+				thread_scoped_lock display_lock(display_mutex);
+				tonemap(tile_manager.state.sample);
+			}
 
-			update_progressive_refine(true); //progress.get_cancel() /*|| display_update_cb != nullptr*/);
-
+			update_progressive_refine(true);
 
 			if (progress.get_cancel())
 				end = true;
@@ -574,12 +569,6 @@ bool Session::sample_cpu()
 		}
 
 		if (!end && !no_tiles) {
-			/* buffers mutex is locked entirely while rendering each
-			 * sample, and released/reacquired on each iteration to allow
-			 * reset and draw in between */
-			//thread_scoped_lock buffers_lock(buffers_mutex);
-			thread_scoped_lock display_lock(display_mutex);
-
 			/* update status and timing */
 			update_status_time();
 
@@ -601,10 +590,12 @@ bool Session::sample_cpu()
 			if (!device->error_message().empty())
 				progress.set_error(device->error_message());
 
-			//display->draw_set(tile_manager.state.buffer.width, tile_manager.state.buffer.height);
-			if(!params.background) tonemap(tile_manager.state.sample);
+			if (!params.background) {
+				thread_scoped_lock display_lock(display_mutex);
+				tonemap(tile_manager.state.sample);
+			}
 
-			update_progressive_refine(true); //progress.get_cancel() /*|| display_update_cb != nullptr*/);
+			update_progressive_refine(true);
 
 
 			if (progress.get_cancel())
