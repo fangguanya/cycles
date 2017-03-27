@@ -125,9 +125,12 @@ void Device::draw_pixels(device_memory& rgba, int y, int w, int h, int dx, int d
 
 		GLint tex = glGetUniformLocation(draw_params.program, "tex");
 		GLint viewport_size = glGetUniformLocation(draw_params.program, "viewport_size");
+		GLint subsize = glGetUniformLocation(draw_params.program, "subsize");
 
 		glUniform1i(tex, 0);
 		glUniform2f(viewport_size, (float)width, (float)height);
+		// the x for subsize is used for debug purposes. Actual data in yzw
+		glUniform4f(subsize, 0.1f, (float)width, (float)dy, (float)dy + height);
 
 		GLuint temp_vao = 0;
 		glGenVertexArrays(1, &temp_vao);
