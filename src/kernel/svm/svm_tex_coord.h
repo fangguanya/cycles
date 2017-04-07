@@ -21,7 +21,7 @@ CCL_NAMESPACE_BEGIN
 /* wcs_box_coord gives a Rhino-style WCS box texture coordinate mapping. */
 ccl_device_inline void wcs_box_coord(KernelGlobals *kg, ShaderData *sd, float3 *data)
 {
-	float3 N = ccl_fetch(sd, N);
+	float3 N = sd->N; //ccl_fetch(sd, N);
 
 	int side0 = 0;
 
@@ -109,8 +109,8 @@ ccl_device_inline void wcs_box_coord(KernelGlobals *kg, ShaderData *sd, float3 *
 
 ccl_device_inline float3 get_reflected_incoming_ray(KernelGlobals *kg, ShaderData *sd)
 {
-	float3 n = ccl_fetch(sd, N);
-	float3 i = ccl_fetch(sd, I);
+	float3 n = sd->N; //ccl_fetch(sd, N);
+	float3 i = sd->I; //ccl_fetch(sd, I);
 
 	float3 refl = 2 * n * dot(i, n) - i;
 
@@ -522,9 +522,9 @@ ccl_device void svm_node_tex_coord(KernelGlobals *kg,
 			break;
 		}
 		case NODE_TEXCO_WCS_BOX: {
-			data = ccl_fetch(sd, P);
+			data = sd->P; //ccl_fetch(sd, P);
 			if (node.w == 0) {
-				if (ccl_fetch(sd, object) != OBJECT_NONE) {
+				if (sd->object != OBJECT_NONE) { //if (ccl_fetch(sd, object) != OBJECT_NONE) {
 					object_inverse_position_transform(kg, sd, &data);
 				}
 			}
@@ -653,9 +653,9 @@ ccl_device void svm_node_tex_coord_bump_dx(KernelGlobals *kg,
 			break;
 		}
 		case NODE_TEXCO_WCS_BOX: {
-			data = ccl_fetch(sd, P) + ccl_fetch(sd, dP).dx;
+			data = sd->P + sd->dP.dx; //ccl_fetch(sd, P) + ccl_fetch(sd, dP).dx;
 			if (node.w == 0) {
-				if (ccl_fetch(sd, object) != OBJECT_NONE) {
+				if (sd->object != OBJECT_NONE) {//if (ccl_fetch(sd, object) != OBJECT_NONE) {
 					object_inverse_position_transform(kg, sd, &data);
 				}
 			}
@@ -783,9 +783,9 @@ ccl_device void svm_node_tex_coord_bump_dy(KernelGlobals *kg,
 			break;
 		}
 		case NODE_TEXCO_WCS_BOX: {
-			data = ccl_fetch(sd, P) + ccl_fetch(sd, dP).dy;
+			data = sd->P + sd->dP.dy; //ccl_fetch(sd, P) + ccl_fetch(sd, dP).dy;
 			if (node.w == 0) {
-				if (ccl_fetch(sd, object) != OBJECT_NONE) {
+				if (sd->object != OBJECT_NONE) {//if (ccl_fetch(sd, object) != OBJECT_NONE) {
 					object_inverse_position_transform(kg, sd, &data);
 				}
 			}
