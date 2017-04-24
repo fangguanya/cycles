@@ -609,7 +609,7 @@ void ObjectManager::device_update_flags(Device *device,
 			object_flag[object_index] |= SD_OBJECT_LIGHT_NO_CAST_SHADOWS;
 		}
 		else {
-			object_flag[object_index] &= SD_OBJECT_LIGHT_NO_CAST_SHADOWS;
+			object_flag[object_index] &= ~SD_OBJECT_LIGHT_NO_CAST_SHADOWS;
 		}
 
 		if(bounds_valid) {
