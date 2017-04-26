@@ -106,8 +106,6 @@ void Device::draw_pixels(device_memory& rgba, int y, int w, int h, int dx, int d
 		glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 	}
 
-	glColor3f(0.5f, 1.0f, 0.7f);
-
 	if(rgba.data_type == TYPE_HALF) {
 		GLhalf *data_pointer = (GLhalf*)rgba.data_pointer;
 
@@ -120,8 +118,6 @@ void Device::draw_pixels(device_memory& rgba, int y, int w, int h, int dx, int d
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F_ARB, w, h, 0, GL_RGBA, GL_HALF_FLOAT, data_pointer);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-		glEnable(GL_TEXTURE_2D);
 
 		GLint tex = glGetUniformLocation(draw_params.program, "tex");
 		GLint subsize = glGetUniformLocation(draw_params.program, "subsize");
@@ -151,7 +147,6 @@ void Device::draw_pixels(device_memory& rgba, int y, int w, int h, int dx, int d
 		glBindVertexArray(0);
 		glDeleteVertexArrays(1, &temp_vao);
 		glBindTexture(GL_TEXTURE_2D, 0);
-		glDisable(GL_TEXTURE_2D);
 		glDeleteTextures(1, &texid);
 
 #if OLDSTUFF
